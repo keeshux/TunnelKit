@@ -3,7 +3,7 @@
 //  TunnelKit
 //
 //  Created by Davide De Rosa on 2/1/17.
-//  Copyright (c) 2020 Davide De Rosa. All rights reserved.
+//  Copyright (c) 2020 Davide De Rosa, Sam Foxman. All rights reserved.
 //
 //  https://github.com/passepartoutvpn
 //
@@ -445,10 +445,10 @@ extension OpenVPNTunnelProvider: GenericSocketDelegate {
             return
         }
         if session.canRebindLink() {
-            session.rebindLink(producer.link(withMTU: cfg.mtu))
+            session.rebindLink(producer.link(withMTU: cfg.mtu, xorMask: cfg.xorMask))
             reasserting = false
         } else {
-            session.setLink(producer.link(withMTU: cfg.mtu))
+            session.setLink(producer.link(withMTU: cfg.mtu, xorMask: cfg.xorMask))
         }
     }
     

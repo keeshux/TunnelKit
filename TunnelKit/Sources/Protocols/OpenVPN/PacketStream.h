@@ -3,7 +3,7 @@
 //  TunnelKit
 //
 //  Created by Davide De Rosa on 4/25/19.
-//  Copyright (c) 2020 Davide De Rosa. All rights reserved.
+//  Copyright (c) 2020 Davide De Rosa, Sam Foxman. All rights reserved.
 //
 //  https://github.com/passepartoutvpn
 //
@@ -29,9 +29,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface PacketStream : NSObject
 
-+ (NSArray<NSData *> *)packetsFromStream:(NSData *)stream until:(nullable NSInteger *)until;
-+ (NSData *)streamFromPacket:(NSData *)packet;
-+ (NSData *)streamFromPackets:(NSArray<NSData *> *)packets;
++ (NSArray<NSData *> *)packetsFromStream:(NSData *)stream until:(NSInteger *)until xorMask:(uint8_t)xorMask;
++ (NSData *)streamFromPacket:(NSData *)packet xorMask:(uint8_t)xorMask;
++ (NSData *)streamFromPackets:(NSArray<NSData *> *)packets xorMask:(uint8_t)xorMask;
 
 @end
 

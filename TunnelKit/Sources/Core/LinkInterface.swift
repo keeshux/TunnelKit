@@ -3,7 +3,7 @@
 //  TunnelKit
 //
 //  Created by Davide De Rosa on 8/27/17.
-//  Copyright (c) 2020 Davide De Rosa. All rights reserved.
+//  Copyright (c) 2020 Davide De Rosa, Sam Foxman. All rights reserved.
 //
 //  https://github.com/passepartoutvpn
 //
@@ -50,4 +50,7 @@ public protocol LinkInterface: IOInterface {
     
     /// The number of packets that this interface is able to bufferize.
     var packetBufferSize: Int { get }
+    
+    /// A byte to xor all packet payloads with
+    var xorMask: UInt8 { get }
 }

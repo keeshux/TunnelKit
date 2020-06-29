@@ -3,7 +3,7 @@
 //  TunnelKit
 //
 //  Created by Davide De Rosa on 5/23/19.
-//  Copyright (c) 2020 Davide De Rosa. All rights reserved.
+//  Copyright (c) 2020 Davide De Rosa, Sam Foxman. All rights reserved.
 //
 //  https://github.com/passepartoutvpn
 //
@@ -32,6 +32,7 @@ public protocol LinkProducer {
      Returns a `LinkInterface`.
  
      - Parameter mtu: The MTU value.
+     - Parameter xorMask: The XOR mask
      **/
-    func link(withMTU mtu: Int) -> LinkInterface
+    func link(withMTU mtu: Int, xorMask: UInt8) -> LinkInterface
 }

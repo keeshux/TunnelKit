@@ -3,7 +3,7 @@
 //  TunnelKit
 //
 //  Created by Davide De Rosa on 5/23/19.
-//  Copyright (c) 2020 Davide De Rosa. All rights reserved.
+//  Copyright (c) 2020 Davide De Rosa, Sam Foxman. All rights reserved.
 //
 //  https://github.com/passepartoutvpn
 //
@@ -31,10 +31,13 @@ class NEUDPLink: LinkInterface {
     
     private let maxDatagrams: Int
     
-    init(impl: NWUDPSession, mtu: Int, maxDatagrams: Int? = nil) {
+    var xorMask: UInt8
+    
+    init(impl: NWUDPSession, mtu: Int, maxDatagrams: Int? = nil, xorMask: UInt8) {
         self.impl = impl
         self.mtu = mtu
         self.maxDatagrams = maxDatagrams ?? 200
+        self.xorMask = xorMask
     }
     
     // MARK: LinkInterface
@@ -55,23 +58,45 @@ class NEUDPLink: LinkInterface {
         
         // WARNING: runs in Network.framework queue
         impl.setReadHandler({ [weak self] (packets, error) in
-            guard let _ = self else {
+            guard let self = self else {
                 return
             }
+            var packetsToUse: [Data]?
+            if let packets = packets, self.xorMask != 0 {
+                packetsToUse = packets.map({ (packet) -> Data in
+                    return Data(bytes: packet.map{$0 ^ self.xorMask}, count: packet.count)
+                })
+            } else {
+                packetsToUse = packets
+            }
             queue.sync {
-                handler(packets, error)
+                handler(packetsToUse, error)
             }
             }, maxDatagrams: maxDatagrams)
     }
     
     func writePacket(_ packet: Data, completionHandler: ((Error?) -> Void)?) {
-        impl.writeDatagram(packet) { (error) in
+        var dataToUse: Data;
+        if xorMask == 0 {
+            dataToUse = packet;
+        } else {
+            dataToUse = Data(bytes: packet.map{$0 ^ xorMask}, count: packet.count)
+        }
+        impl.writeDatagram(dataToUse) { (error) in
             completionHandler?(error)
         }
     }
     
     func writePackets(_ packets: [Data], completionHandler: ((Error?) -> Void)?) {
-        impl.writeMultipleDatagrams(packets) { (error) in
+        var datasToUse: [Data];
+        if xorMask == 0 {
+            datasToUse = packets;
+        } else {
+            datasToUse = packets.map({ (packet) -> Data in
+                return Data(bytes: packet.map{$0 ^ xorMask}, count: packet.count)
+            })
+        }
+        impl.writeMultipleDatagrams(datasToUse) { (error) in
             completionHandler?(error)
         }
     }
@@ -79,7 +104,7 @@ class NEUDPLink: LinkInterface {
 
 /// :nodoc:
 extension NEUDPSocket: LinkProducer {
-    public func link(withMTU mtu: Int) -> LinkInterface {
-        return NEUDPLink(impl: impl, mtu: mtu)
+    public func link(withMTU mtu: Int, xorMask: UInt8) -> LinkInterface {
+        return NEUDPLink(impl: impl, mtu: mtu, maxDatagrams: nil, xorMask: xorMask)
     }
 }

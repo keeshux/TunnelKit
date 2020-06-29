@@ -3,7 +3,7 @@
 //  TunnelKit
 //
 //  Created by Davide De Rosa on 5/23/19.
-//  Copyright (c) 2020 Davide De Rosa. All rights reserved.
+//  Copyright (c) 2020 Davide De Rosa, Sam Foxman. All rights reserved.
 //
 //  https://github.com/passepartoutvpn
 //
@@ -32,10 +32,13 @@ class NETCPLink: LinkInterface {
     
     private let maxPacketSize: Int
     
-    init(impl: NWTCPConnection, mtu: Int, maxPacketSize: Int? = nil) {
+    var xorMask: UInt8
+    
+    init(impl: NWTCPConnection, mtu: Int, maxPacketSize: Int? = nil, xorMask: UInt8) {
         self.impl = impl
         self.mtu = mtu
         self.maxPacketSize = maxPacketSize ?? (512 * 1024)
+        self.xorMask = xorMask
     }
     
     // MARK: LinkInterface
@@ -58,6 +61,8 @@ class NETCPLink: LinkInterface {
     
     private func loopReadPackets(_ queue: DispatchQueue, _ buffer: Data, _ handler: @escaping ([Data]?, Error?) -> Void) {
         
+        let xorMaskSaved = xorMask
+        
         // WARNING: runs in Network.framework queue
         impl.readMinimumLength(2, maximumLength: packetBufferSize) { [weak self] (data, error) in
             guard let _ = self else {
@@ -72,7 +77,7 @@ class NETCPLink: LinkInterface {
                 var newBuffer = buffer
                 newBuffer.append(contentsOf: data)
                 var until = 0
-                let packets = PacketStream.packets(fromStream: newBuffer, until: &until)
+                let packets = PacketStream.packets(fromStream: newBuffer, until: &until, xorMask: xorMaskSaved)
                 newBuffer = newBuffer.subdata(in: until..<newBuffer.count)
                 self?.loopReadPackets(queue, newBuffer, handler)
                 
@@ -82,14 +87,14 @@ class NETCPLink: LinkInterface {
     }
     
     func writePacket(_ packet: Data, completionHandler: ((Error?) -> Void)?) {
-        let stream = PacketStream.stream(fromPacket: packet)
+        let stream = PacketStream.stream(fromPacket: packet, xorMask: xorMask)
         impl.write(stream) { (error) in
             completionHandler?(error)
         }
     }
     
     func writePackets(_ packets: [Data], completionHandler: ((Error?) -> Void)?) {
-        let stream = PacketStream.stream(fromPackets: packets)
+        let stream = PacketStream.stream(fromPackets: packets, xorMask: xorMask)
         impl.write(stream) { (error) in
             completionHandler?(error)
         }
@@ -98,7 +103,7 @@ class NETCPLink: LinkInterface {
 
 /// :nodoc:
 extension NETCPSocket: LinkProducer {
-    public func link(withMTU mtu: Int) -> LinkInterface {
-        return NETCPLink(impl: impl, mtu: mtu)
+    public func link(withMTU mtu: Int, xorMask: UInt8) -> LinkInterface {
+        return NETCPLink(impl: impl, mtu: mtu, maxPacketSize: nil, xorMask: xorMask)
     }
 }

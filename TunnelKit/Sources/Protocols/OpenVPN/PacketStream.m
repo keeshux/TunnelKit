@@ -3,7 +3,7 @@
 //  TunnelKit
 //
 //  Created by Davide De Rosa on 4/25/19.
-//  Copyright (c) 2020 Davide De Rosa. All rights reserved.
+//  Copyright (c) 2020 Davide De Rosa, Sam Foxman. All rights reserved.
 //
 //  https://github.com/passepartoutvpn
 //
@@ -29,7 +29,18 @@ static const NSInteger PacketStreamHeaderLength = sizeof(uint16_t);
 
 @implementation PacketStream
 
-+ (NSArray<NSData *> *)packetsFromStream:(NSData *)stream until:(NSInteger *)until
++ (void)memcpyXor:(uint8_t*)dst src:(NSData*)src xorMask:(uint8_t)xorMask
+{
+    if (xorMask == 0) {
+        memcpy(dst, src.bytes, src.length);
+    } else {
+        for (int i = 0; i < src.length; i++) {
+            dst[i] = ((uint8_t*)(src.bytes))[i] ^ xorMask;
+        }
+    }
+}
+
++ (NSArray<NSData *> *)packetsFromStream:(NSData *)stream until:(NSInteger *)until xorMask:(uint8_t)xorMask
 {
     NSInteger ni = 0;
     NSMutableArray<NSData *> *parsed = [[NSMutableArray alloc] init];
@@ -42,6 +53,10 @@ static const NSInteger PacketStreamHeaderLength = sizeof(uint16_t);
             break;
         }
         NSData *packet = [stream subdataWithRange:NSMakeRange(start, packlen)];
+        uint8_t* packetBytes = (uint8_t*) packet.bytes;
+        for (int i = 0; i < packet.length; i++) {
+            packetBytes[i] ^= xorMask;
+        }
         [parsed addObject:packet];
         ni = end;
     }
@@ -51,19 +66,19 @@ static const NSInteger PacketStreamHeaderLength = sizeof(uint16_t);
     return parsed;
 }
 
-+ (NSData *)streamFromPacket:(NSData *)packet
++ (NSData *)streamFromPacket:(NSData *)packet xorMask:(uint8_t)xorMask
 {
     NSMutableData *raw = [[NSMutableData alloc] initWithLength:(PacketStreamHeaderLength + packet.length)];
 
     uint8_t *ptr = raw.mutableBytes;
     *(uint16_t *)ptr = CFSwapInt16HostToBig(packet.length);
     ptr += PacketStreamHeaderLength;
-    memcpy(ptr, packet.bytes, packet.length);
+    [PacketStream memcpyXor:ptr src:packet xorMask:xorMask];
     
     return raw;
 }
 
-+ (NSData *)streamFromPackets:(NSArray<NSData *> *)packets;
++ (NSData *)streamFromPackets:(NSArray<NSData *> *)packets xorMask:(uint8_t)xorMask
 {
     NSInteger streamLength = 0;
     for (NSData *p in packets) {
@@ -75,7 +90,7 @@ static const NSInteger PacketStreamHeaderLength = sizeof(uint16_t);
     for (NSData *packet in packets) {
         *(uint16_t *)ptr = CFSwapInt16HostToBig(packet.length);
         ptr += PacketStreamHeaderLength;
-        memcpy(ptr, packet.bytes, packet.length);
+        [PacketStream memcpyXor:ptr src:packet xorMask:xorMask];
         ptr += packet.length;
     }
     return raw;
