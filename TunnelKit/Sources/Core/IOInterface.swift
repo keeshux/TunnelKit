@@ -37,7 +37,7 @@
 import Foundation
 
 /// Represents an I/O interface able to read and write data.
-public protocol IOInterface: class {
+public protocol IOInterface: AnyObject {
 
     /**
      Sets the handler for incoming packets. This only needs to be set once.

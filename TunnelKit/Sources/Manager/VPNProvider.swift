@@ -26,7 +26,7 @@
 import Foundation
 
 /// Helps controlling a VPN without messing with underlying implementations.
-public protocol VPNProvider: class {
+public protocol VPNProvider: AnyObject {
 
     /// `true` if the VPN is ready for use.
     var isPrepared: Bool { get }

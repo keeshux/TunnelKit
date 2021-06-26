@@ -37,7 +37,7 @@
 import Foundation
 
 /// Receives events from a `GenericSocket`.
-public protocol GenericSocketDelegate: class {
+public protocol GenericSocketDelegate: AnyObject {
 
     /**
      The socket timed out.

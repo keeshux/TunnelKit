@@ -42,7 +42,7 @@ import __TunnelKitOpenVPN
 private let log = SwiftyBeaver.self
 
 /// Observes major events notified by a `OpenVPNSession`.
-public protocol OpenVPNSessionDelegate: class {
+public protocol OpenVPNSessionDelegate: AnyObject {
     
     /**
      Called after starting a session.
